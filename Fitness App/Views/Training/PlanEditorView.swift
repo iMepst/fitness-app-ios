@@ -18,13 +18,21 @@ struct PlanEditorView: View {
             }
 
             Section {
-                ForEach(plan.sortedEntries) { entry in
+                let entries = plan.sortedEntries
+                let labels = Supersets.labels(in: entries)
+                ForEach(entries) { entry in
                     Button {
                         editingEntry = entry
                     } label: {
-                        PlanEntryRow(entry: entry)
+                        PlanEntryRow(entry: entry, supersetLabel: entry.supersetGroup.flatMap { labels[$0] })
                     }
                     .tint(.primary)
+                    .swipeActions(edge: .leading) {
+                        supersetButton(for: entry, in: entries)
+                    }
+                    .contextMenu {
+                        supersetButton(for: entry, in: entries)
+                    }
                 }
                 .onDelete(perform: deleteEntries)
                 .onMove(perform: moveEntries)
@@ -35,7 +43,7 @@ struct PlanEditorView: View {
             } header: {
                 Text("Übungen")
             } footer: {
-                Text("Tippe auf eine Übung, um Sätze, Wiederholungen und Pause anzupassen.")
+                Text("Tippe auf eine Übung, um Sätze, Wiederholungen und Pause anzupassen. Nach rechts wischen verbindet sie mit der nächsten Übung zu einem Supersatz.")
             }
         }
         .navigationTitle(plan.name.isEmpty ? "Plan" : plan.name)
@@ -66,6 +74,21 @@ struct PlanEditorView: View {
         try? modelContext.save()
     }
 
+    @ViewBuilder
+    private func supersetButton(for entry: PlanEntry, in entries: [PlanEntry]) -> some View {
+        if Supersets.isLinkedWithNext(entry, in: entries) || (entry.supersetGroup != nil && Supersets.next(after: entry, in: entries) == nil) {
+            Button("Supersatz lösen", systemImage: "scissors") {
+                withAnimation { Supersets.unlink(entry, in: plan.entries) }
+            }
+            .tint(.orange)
+        } else if Supersets.next(after: entry, in: entries) != nil {
+            Button("Mit nächster verbinden", systemImage: "link") {
+                withAnimation { Supersets.linkWithNext(entry, in: plan.entries) }
+            }
+            .tint(.indigo)
+        }
+    }
+
     private func deleteEntries(at offsets: IndexSet) {
         let sorted = plan.sortedEntries
         for index in offsets {
@@ -73,6 +96,7 @@ struct PlanEditorView: View {
             plan.entries.removeAll { $0.persistentModelID == entry.persistentModelID }
             modelContext.delete(entry)
         }
+        Supersets.cleanUp(plan.entries)
     }
 
     private func moveEntries(from source: IndexSet, to destination: Int) {
@@ -86,9 +110,13 @@ struct PlanEditorView: View {
 
 private struct PlanEntryRow: View {
     let entry: PlanEntry
+    let supersetLabel: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
+            if let supersetLabel {
+                SupersetTag(label: supersetLabel)
+            }
             HStack {
                 Text(entry.exercise?.name ?? "Gelöschte Übung")
                 if let gym = entry.exercise?.gym {

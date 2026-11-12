@@ -14,6 +14,13 @@ struct ActiveWorkoutView: View {
     @State private var showEmptyAlert = false
     @State private var isFinished = false
     @State private var setCompletedTrigger = 0
+    @State private var plateTarget: PlateTarget?
+
+    private struct PlateTarget: Identifiable {
+        let id = UUID()
+        let exerciseName: String
+        let weight: Double
+    }
 
     var body: some View {
         NavigationStack {
@@ -58,15 +65,37 @@ struct ActiveWorkoutView: View {
                     }
                     .font(.subheadline)
                 }
+                TextField("Notiz zum Training", text: $session.notes, axis: .vertical)
+                    .font(.subheadline)
             }
 
-            ForEach(session.sortedExercises) { entry in
-                ExerciseLogSection(entry: entry) {
+            let entries = session.sortedExercises
+            let labels = Supersets.labels(in: entries)
+            ForEach(entries) { entry in
+                ExerciseLogSection(
+                    entry: entry,
+                    supersetLabel: entry.supersetGroup.flatMap { labels[$0] },
+                    nextInSuperset: Supersets.isLinkedWithNext(entry, in: entries)
+                        ? Supersets.next(after: entry, in: entries)?.exerciseName : nil,
+                    canLinkWithNext: Supersets.next(after: entry, in: entries) != nil
+                        && !Supersets.isLinkedWithNext(entry, in: entries)
+                ) {
                     dismissKeyboard()
                     setCompletedTrigger += 1
-                    restTimer.start(seconds: entry.restSeconds)
+                    if Supersets.shouldStartRest(after: entry, in: session.exercises) {
+                        restTimer.start(seconds: entry.restSeconds)
+                    }
                 } onRemove: {
                     WorkoutFactory.remove(entry, from: session, in: modelContext)
+                } onLink: {
+                    withAnimation { Supersets.linkWithNext(entry, in: session.exercises) }
+                } onUnlink: {
+                    withAnimation { Supersets.unlink(entry, in: session.exercises) }
+                } onPlateCalculator: {
+                    plateTarget = PlateTarget(
+                        exerciseName: entry.exerciseName,
+                        weight: (entry.sortedSets.first { !$0.isCompleted } ?? entry.sortedSets.last)?.weight ?? 0
+                    )
                 }
             }
 
@@ -108,6 +137,10 @@ struct ActiveWorkoutView: View {
                     WorkoutFactory.addExercise(exercise, to: session, in: modelContext)
                 }
             }
+        }
+        .sheet(item: $plateTarget) { target in
+            PlateCalculatorSheet(exerciseName: target.exerciseName, target: target.weight)
+                .presentationDetents([.medium, .large])
         }
         .confirmationDialog("Training beenden?", isPresented: $showFinishDialog, titleVisibility: .visible) {
             Button("Training beenden", action: finish)
@@ -161,18 +194,34 @@ struct ActiveWorkoutView: View {
 
 private struct ExerciseLogSection: View {
     @Bindable var entry: SessionExercise
+    let supersetLabel: String?
+    /// Name of the next exercise when this one is linked with it.
+    let nextInSuperset: String?
+    let canLinkWithNext: Bool
     let onSetCompleted: () -> Void
     let onRemove: () -> Void
+    let onLink: () -> Void
+    let onUnlink: () -> Void
+    let onPlateCalculator: () -> Void
 
     @Environment(\.modelContext) private var modelContext
 
     var body: some View {
+        let lastEntry = lastPerformance
         Section {
-            if let last = lastPerformanceText {
-                Label(last, systemImage: "clock.arrow.circlepath")
+            if let last = lastEntry, let date = last.session?.startDate {
+                Label("Letztes Mal (\(date.formatted(.dateTime.day().month()))): \(WorkoutStats.summary(of: last))", systemImage: "clock.arrow.circlepath")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+                if !last.notes.isEmpty {
+                    Label(last.notes, systemImage: "note.text")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
             }
+
+            TextField("Notiz", text: $entry.notes, axis: .vertical)
+                .font(.subheadline)
 
             HStack(spacing: 12) {
                 Text("Satz").frame(width: 36)
@@ -183,8 +232,10 @@ private struct ExerciseLogSection: View {
             .font(.caption.weight(.semibold))
             .foregroundStyle(.secondary)
 
-            ForEach(Array(entry.sortedSets.enumerated()), id: \.element.id) { index, set in
-                SetRow(number: index + 1, set: set) { completed in
+            let sets = entry.sortedSets
+            let numbers = WorkoutStats.setNumbers(sets)
+            ForEach(Array(sets.enumerated()), id: \.element.id) { index, set in
+                SetRow(number: numbers[index], set: set) { completed in
                     if completed { onSetCompleted() }
                 }
             }
@@ -201,12 +252,26 @@ private struct ExerciseLogSection: View {
             .font(.subheadline)
         } header: {
             HStack {
-                Text(entry.exerciseName)
-                    .font(.headline)
-                    .foregroundStyle(.primary)
+                VStack(alignment: .leading, spacing: 2) {
+                    if let supersetLabel {
+                        SupersetTag(label: supersetLabel)
+                    }
+                    Text(entry.exerciseName)
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                }
                 Spacer()
                 Menu {
                     Text("Pause: \(Format.rest(entry.restSeconds))")
+                    if canLinkWithNext {
+                        Button("Mit nächster Übung verbinden", systemImage: "link", action: onLink)
+                    }
+                    if supersetLabel != nil {
+                        Button("Supersatz lösen", systemImage: "scissors", action: onUnlink)
+                    }
+                    if entry.exercise?.equipment == .langhantel {
+                        Button("Scheibenrechner", systemImage: "scalemass", action: onPlateCalculator)
+                    }
                     Button("Übung entfernen", systemImage: "trash", role: .destructive, action: onRemove)
                 } label: {
                     Image(systemName: "ellipsis.circle")
@@ -214,15 +279,16 @@ private struct ExerciseLogSection: View {
                 }
             }
             .textCase(nil)
+        } footer: {
+            if let nextInSuperset {
+                Label("Ohne Pause weiter mit \(nextInSuperset)", systemImage: "arrow.down")
+            }
         }
     }
 
-    private var lastPerformanceText: String? {
-        guard let exercise = entry.exercise,
-              let last = WorkoutStats.lastPerformance(of: exercise, excluding: entry.session),
-              let date = last.session?.startDate
-        else { return nil }
-        return "Letztes Mal (\(date.formatted(.dateTime.day().month()))): \(WorkoutStats.summary(of: last))"
+    private var lastPerformance: SessionExercise? {
+        guard let exercise = entry.exercise else { return nil }
+        return WorkoutStats.lastPerformance(of: exercise, excluding: entry.session)
     }
 }
 
@@ -231,12 +297,29 @@ private struct SetRow: View {
     @Bindable var set: SetEntry
     let onToggle: (Bool) -> Void
 
+    private static let rpeValues: [Double] = Array(stride(from: 6.0, through: 10.0, by: 0.5))
+
     var body: some View {
         HStack(spacing: 12) {
-            Text("\(number)")
-                .font(.headline)
-                .monospacedDigit()
-                .frame(width: 36)
+            Menu {
+                Picker("Satzart", selection: $set.kind) {
+                    ForEach(SetKind.allCases) { kind in
+                        Text(kind.label).tag(kind)
+                    }
+                }
+                Picker("RPE", selection: $set.rpe) {
+                    Text("Kein RPE").tag(Double?.none)
+                    ForEach(Self.rpeValues, id: \.self) { value in
+                        Text("RPE \(Format.rpe(value))").tag(Double?.some(value))
+                    }
+                }
+                .pickerStyle(.menu)
+            } label: {
+                SetBadge(kind: set.kind, number: number, rpe: set.rpe)
+                    .frame(width: 36, height: 36)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityLabel("\(set.kind.label) \(number), Satzart und RPE ändern")
             DecimalField(placeholder: "kg", value: $set.weight)
                 .frame(maxWidth: .infinity)
             IntegerField(placeholder: "Wdh.", value: $set.reps)

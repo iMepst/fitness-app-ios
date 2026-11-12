@@ -94,4 +94,91 @@ struct LoggingTests {
         #expect(AppSettings.encodePlates([2.5, 20, 1.25]) == "20.0;2.5;1.25")
         #expect(AppSettings.parsePlates("20.0;20;x;-5") == [20])
     }
+
+    // MARK: - Supersets
+
+    private func session(with names: [String]) -> WorkoutSession {
+        let session = WorkoutFactory.startSession(plan: nil, gym: nil, in: context)
+        for name in names {
+            let exercise = Exercise(name: name, muscleGroup: .ganzkoerper, equipment: .kurzhantel)
+            context.insert(exercise)
+            WorkoutFactory.addExercise(exercise, to: session, in: context)
+        }
+        return session
+    }
+
+    @Test func linkingFormsSupersetAndRestStartsAfterLastMember() {
+        let session = session(with: ["A", "B", "C"])
+        let (a, b, c) = (session.sortedExercises[0], session.sortedExercises[1], session.sortedExercises[2])
+
+        Supersets.linkWithNext(a, in: session.exercises)
+        #expect(a.supersetGroup != nil && a.supersetGroup == b.supersetGroup)
+        #expect(c.supersetGroup == nil)
+        #expect(!Supersets.shouldStartRest(after: a, in: session.exercises))
+        #expect(Supersets.shouldStartRest(after: b, in: session.exercises))
+        #expect(Supersets.shouldStartRest(after: c, in: session.exercises))
+
+        Supersets.linkWithNext(b, in: session.exercises)
+        #expect(c.supersetGroup == a.supersetGroup)
+        #expect(!Supersets.shouldStartRest(after: b, in: session.exercises))
+        #expect(Supersets.shouldStartRest(after: c, in: session.exercises))
+        #expect(Supersets.labels(in: session.exercises) == [a.supersetGroup!: "A"])
+    }
+
+    @Test func unlinkingAndRemovingDissolveSingleMemberGroups() {
+        let session = session(with: ["A", "B", "C", "D"])
+        let e = session.sortedExercises
+        Supersets.linkWithNext(e[0], in: session.exercises)
+        Supersets.linkWithNext(e[2], in: session.exercises)
+        #expect(Supersets.labels(in: session.exercises).values.sorted() == ["A", "B"])
+
+        Supersets.unlink(e[0], in: session.exercises)
+        #expect(e[0].supersetGroup == nil)
+        #expect(e[1].supersetGroup == nil)
+
+        WorkoutFactory.remove(e[3], from: session, in: context)
+        #expect(e[2].supersetGroup == nil)
+    }
+
+    @Test func linkingMergesNeighbouringGroups() {
+        let session = session(with: ["A", "B", "C", "D"])
+        let e = session.sortedExercises
+        Supersets.linkWithNext(e[0], in: session.exercises)
+        Supersets.linkWithNext(e[2], in: session.exercises)
+        Supersets.linkWithNext(e[1], in: session.exercises)
+        #expect(Set(e.map(\.supersetGroup)).count == 1)
+        #expect(Supersets.shouldStartRest(after: e[3], in: session.exercises))
+        #expect(!Supersets.shouldStartRest(after: e[2], in: session.exercises))
+    }
+
+    // MARK: - Plates & numbering
+
+    @Test func plateCalculatorLoadsExactWeight() throws {
+        let plates = AppSettings.parsePlates(AppSettings.defaultPlates)
+        let loading = try #require(PlateCalculator.loading(target: 102.5, bar: 20, plates: plates))
+        #expect(loading.perSide == [25, 15, 1.25])
+        #expect(loading.remainderPerSide == 0)
+        #expect(loading.achieved == 102.5)
+    }
+
+    @Test func plateCalculatorReportsRemainder() throws {
+        let loading = try #require(PlateCalculator.loading(target: 61, bar: 20, plates: [20, 10, 5, 2.5]))
+        #expect(loading.perSide == [20])
+        #expect(loading.remainderPerSide == 0.5)
+        #expect(loading.achieved == 60)
+    }
+
+    @Test func plateCalculatorEdgeCases() throws {
+        #expect(PlateCalculator.loading(target: 15, bar: 20, plates: [10]) == nil)
+        let barOnly = try #require(PlateCalculator.loading(target: 20, bar: 20, plates: [10]))
+        #expect(barOnly.perSide.isEmpty)
+        #expect(barOnly.achieved == 20)
+    }
+
+    @Test func setNumbersSkipSpecialSets() {
+        let kinds: [SetKind] = [.aufwaermen, .aufwaermen, .normal, .normal, .drop, .normal]
+        let sets = kinds.enumerated().map { SetEntry(sortIndex: $0.offset, weight: 50, reps: 5, kind: $0.element) }
+        sets.forEach(context.insert)
+        #expect(WorkoutStats.setNumbers(sets) == [0, 0, 1, 2, 2, 3])
+    }
 }

@@ -75,6 +75,15 @@ enum WorkoutStats {
         return current > (previous.map { bestOneRepMax(of: $0) }.max() ?? 0)
     }
 
+    /// Display numbers for a set list: normal sets count 1, 2, 3 …; other kinds show a badge instead.
+    static func setNumbers(_ sets: [SetEntry]) -> [Int] {
+        var counter = 0
+        return sets.map { set in
+            if set.kind == .normal { counter += 1 }
+            return counter
+        }
+    }
+
     /// "3 × 8 @ 80 kg" when all working sets are equal, otherwise "80 kg × 8 · 75 kg × 8".
     /// Warm-ups are left out and mentioned as "+ 2 Aufwärmsätze".
     static func summary(of entry: SessionExercise) -> String {

@@ -23,6 +23,10 @@ struct WorkoutSummaryView: View {
 
             Section {
                 SessionStatsGrid(session: session)
+                if !session.notes.isEmpty {
+                    Label(session.notes, systemImage: "note.text")
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Section("Übungen") {

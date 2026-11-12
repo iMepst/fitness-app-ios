@@ -29,6 +29,11 @@ enum Format {
         min == max ? "\(min)" : "\(min)–\(max)"
     }
 
+    /// "8" or "8,5".
+    static func rpe(_ value: Double) -> String {
+        value.formatted(.number.precision(.fractionLength(0...1)))
+    }
+
     static func count(_ n: Int, _ singular: String, _ plural: String) -> String {
         "\(n) \(n == 1 ? singular : plural)"
     }

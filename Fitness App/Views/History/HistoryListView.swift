@@ -93,20 +93,37 @@ struct SessionDetailView: View {
                     LabeledContent("Studio", value: session.gymName)
                 }
                 SessionStatsGrid(session: session)
+                if !session.notes.isEmpty {
+                    Label(session.notes, systemImage: "note.text")
+                        .foregroundStyle(.secondary)
+                }
             }
 
-            ForEach(session.sortedExercises) { entry in
+            let entries = session.sortedExercises
+            let labels = Supersets.labels(in: entries)
+            ForEach(entries) { entry in
                 Section {
-                    ForEach(Array(entry.sortedSets.enumerated()), id: \.element.id) { index, set in
+                    let sets = entry.sortedSets
+                    let numbers = WorkoutStats.setNumbers(sets)
+                    ForEach(Array(sets.enumerated()), id: \.element.id) { index, set in
                         HStack {
-                            Text("Satz \(index + 1)").foregroundStyle(.secondary)
+                            Text(set.historyLabel(number: numbers[index]))
+                                .foregroundStyle(set.kind == .normal ? .secondary : set.kind.tint)
                             Spacer()
                             Text(set.weight > 0 ? "\(Format.weight(set.weight)) kg × \(set.reps)" : "\(set.reps) Wdh.")
                                 .monospacedDigit()
                         }
                     }
+                    if !entry.notes.isEmpty {
+                        Label(entry.notes, systemImage: "note.text")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
                 } header: {
                     HStack {
+                        if let label = entry.supersetGroup.flatMap({ labels[$0] }) {
+                            SupersetTag(label: label)
+                        }
                         Text(entry.exerciseName)
                         if WorkoutStats.isPersonalRecord(entry) {
                             Image(systemName: "trophy.fill").foregroundStyle(.orange)

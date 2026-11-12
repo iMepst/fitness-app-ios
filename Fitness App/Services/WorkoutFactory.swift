@@ -85,6 +85,7 @@ enum WorkoutFactory {
     static func remove(_ entry: SessionExercise, from session: WorkoutSession, in context: ModelContext) {
         session.exercises.removeAll { $0.persistentModelID == entry.persistentModelID }
         context.delete(entry)
+        Supersets.cleanUp(session.exercises)
     }
 
     /// Drops unfinished sets and empty exercises, then marks the session finished.
