@@ -182,7 +182,7 @@ struct ActiveWorkoutView: View {
         }
         .sheet(item: $plateTarget) { target in
             PlateCalculatorSheet(exerciseName: target.exerciseName, target: target.weight)
-                .presentationDetents([.medium, .large])
+                .presentationDetents([.fraction(0.65), .large])
         }
         .confirmationDialog("Training beenden?", isPresented: $showFinishDialog, titleVisibility: .visible) {
             Button("Training beenden", action: finish)

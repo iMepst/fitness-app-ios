@@ -175,6 +175,24 @@ struct LoggingTests {
         #expect(barOnly.achieved == 20)
     }
 
+    @Test func nearestLoadableWeights() throws {
+        let plates: [Double] = [20, 10, 5, 2.5, 1.25]
+        let nearest = try #require(PlateCalculator.nearest(target: 101, bar: 20, plates: plates))
+        #expect(nearest.lower == 100)
+        #expect(nearest.upper == 102.5)
+        #expect(PlateCalculator.nearest(target: 102.5, bar: 20, plates: plates) == nil, "exact weights need no alternative")
+    }
+
+    @Test func stepJumpsToLoadableWeights() {
+        let plates: [Double] = [20, 10, 5, 2.5, 1.25]
+        #expect(PlateCalculator.step(from: 78, bar: 20, plates: plates, up: true) == 80)
+        #expect(PlateCalculator.step(from: 78, bar: 20, plates: plates, up: false) == 77.5)
+        #expect(PlateCalculator.step(from: 80, bar: 20, plates: plates, up: true) == 82.5)
+        #expect(PlateCalculator.step(from: 80, bar: 20, plates: plates, up: false) == 77.5)
+        #expect(PlateCalculator.step(from: 20, bar: 20, plates: plates, up: false) == 20)
+        #expect(PlateCalculator.step(from: 15, bar: 20, plates: plates, up: true) == 20)
+    }
+
     @Test func setNumbersSkipSpecialSets() {
         let kinds: [SetKind] = [.aufwaermen, .aufwaermen, .normal, .normal, .drop, .normal]
         let sets = kinds.enumerated().map { SetEntry(sortIndex: $0.offset, weight: 50, reps: 5, kind: $0.element) }
