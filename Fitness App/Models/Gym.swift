@@ -27,6 +27,15 @@ final class Gym {
     var lockerNumber: String?
     var lockerSetAt: Date?
 
+    // MARK: Logo (see `GymLogo`)
+
+    /// Logo image (PNG, at most 256 px), loaded from the website or picked by the user.
+    @Attribute(.externalStorage) var logoData: Data?
+    /// Short mark such as "JR", used when there is no logo image.
+    var monogram: String = ""
+    /// Background of the monogram as "#RRGGBB"; empty = accent colour.
+    var monogramColorHex: String = ""
+
     @Relationship(deleteRule: .cascade, inverse: \Exercise.gym)
     var exercises: [Exercise] = []
 

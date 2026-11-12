@@ -20,9 +20,10 @@ struct GymMenu: View {
                 showManager = true
             }
         } label: {
-            // Icon only: the gym's name is shown as the navigation subtitle
+            // Logo only: the gym's name is shown as the navigation subtitle
             // (`activeGymSubtitle()`), so the collapsed title keeps its room.
-            Image(systemName: "mappin.and.ellipse")
+            GymBadge(gym: gyms.active(id: activeGymID), size: 28)
+                .accessibilityElement()
                 .accessibilityLabel("Studio: \(gyms.active(id: activeGymID)?.name ?? "Kein Studio")")
         }
         .sheet(isPresented: $showManager) {

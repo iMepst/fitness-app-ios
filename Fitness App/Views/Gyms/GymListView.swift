@@ -17,7 +17,8 @@ struct GymListView: View {
                     NavigationLink {
                         GymDetailView(gym: gym)
                     } label: {
-                        HStack {
+                        HStack(spacing: 12) {
+                            GymBadge(gym: gym, size: 36)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(gym.name)
                                 Text(Format.count(gym.exercises.count, "Gerät", "Geräte"))

@@ -43,6 +43,8 @@ struct StudioEditForm: View {
                 TextField("Name", text: $gym.name)
             }
 
+            GymLogoSection(gym: gym)
+
             Section("Standort") {
                 if gym.hasLocation {
                     VStack(alignment: .leading, spacing: 2) {
