@@ -31,14 +31,11 @@ struct WorkoutSummaryView: View {
 
             Section("Übungen") {
                 ForEach(session.sortedExercises) { entry in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(entry.exerciseName).font(.headline)
-                            Text(WorkoutStats.summary(of: entry))
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
+                    ExerciseRow(
+                        muscleGroup: entry.exercise?.muscleGroup,
+                        name: entry.exerciseName,
+                        details: [ExerciseDetail(systemImage: "checkmark", text: WorkoutStats.summary(of: entry))]
+                    ) {
                         if WorkoutStats.isPersonalRecord(entry) {
                             Label("Bestleistung", systemImage: "trophy.fill")
                                 .font(.caption.bold())

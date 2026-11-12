@@ -62,6 +62,20 @@ enum WorkoutStats {
         finishedEntries(for: exercise, excluding: session).first
     }
 
+    /// Completed sets of the last finished session with this exercise, in order
+    /// (index-matched with the running sets for the "Vorher" column).
+    static func previousSets(for entry: SessionExercise) -> [SetEntry] {
+        guard let exercise = entry.exercise,
+              let last = lastPerformance(of: exercise, excluding: entry.session)
+        else { return [] }
+        return last.sortedSets.filter(\.isCompleted)
+    }
+
+    /// The exercise the user is on: the first one (in order) that still has an open set.
+    static func currentExercise(in session: WorkoutSession) -> SessionExercise? {
+        session.sortedExercises.first { $0.sets.contains { !$0.isCompleted } }
+    }
+
     static func bestOneRepMax(of entry: SessionExercise) -> Double {
         entry.workingSets.map { estimatedOneRepMax(weight: $0.weight, reps: $0.reps) }.max() ?? 0
     }

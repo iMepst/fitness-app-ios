@@ -228,70 +228,18 @@ private struct PlanEntryRow: View {
     let supersetLabel: String?
 
     var body: some View {
-        HStack(spacing: 12) {
-            MuscleIcon(group: entry.exercise?.muscleGroup, size: 40)
-
-            VStack(alignment: .leading, spacing: 5) {
-                HStack(spacing: 6) {
-                    Text(entry.exercise?.name ?? "Gelöschte Übung")
-                        .font(.body.weight(.semibold))
-                        .lineLimit(1)
-                    if let gym = entry.exercise?.gym {
-                        Text(gym.name)
-                            .font(.caption2)
-                            .lineLimit(1)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(.tint.opacity(0.15), in: Capsule())
-                    }
-                }
-                HStack(spacing: 12) {
-                    detail("square.stack.3d.up", Format.count(entry.targetSets, "Satz", "Sätze"))
-                    detail("repeat", "\(Format.reps(min: entry.repsMin, max: entry.repsMax)) Wdh.")
-                    detail("timer", Format.rest(entry.restSeconds))
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .monospacedDigit()
-
-                if let supersetLabel {
-                    SupersetTag(label: supersetLabel)
-                }
-            }
-
-            Spacer(minLength: 0)
-
-            Image(systemName: "chevron.right")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.tertiary)
-        }
-        .padding(.vertical, 4)
-        .overlay(alignment: .leading) {
-            if let supersetLabel {
-                Capsule()
-                    .fill(SupersetTag.color(for: supersetLabel))
-                    .frame(width: 4)
-                    .offset(x: -12)
-            }
-        }
-        .contentShape(.rect)
-    }
-
-    private func detail(_ systemImage: String, _ text: String) -> some View {
-        Label {
-            Text(text)
-        } icon: {
-            Image(systemName: systemImage)
-        }
-        .labelStyle(DetailLabelStyle())
-    }
-}
-
-private struct DetailLabelStyle: LabelStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        HStack(spacing: 3) {
-            configuration.icon
-            configuration.title
+        ExerciseRow(
+            muscleGroup: entry.exercise?.muscleGroup,
+            name: entry.exercise?.name ?? "Gelöschte Übung",
+            gymName: entry.exercise?.gym?.name,
+            details: [
+                ExerciseDetail(systemImage: "square.stack.3d.up", text: Format.count(entry.targetSets, "Satz", "Sätze")),
+                ExerciseDetail(systemImage: "repeat", text: "\(Format.reps(min: entry.repsMin, max: entry.repsMax)) Wdh."),
+                ExerciseDetail(systemImage: "timer", text: Format.rest(entry.restSeconds)),
+            ],
+            supersetLabel: supersetLabel
+        ) {
+            RowChevron()
         }
     }
 }

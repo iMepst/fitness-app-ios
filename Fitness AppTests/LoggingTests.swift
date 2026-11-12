@@ -47,6 +47,34 @@ struct LoggingTests {
         #expect(WorkoutStats.summary(of: entry) == "2 × 5 @ 100 kg + 1 Aufwärmsatz")
     }
 
+    @Test func previousSetsComeFromLastFinishedSessionInOrder() {
+        let bench = Exercise(name: "Bankdrücken", muscleGroup: .brust, equipment: .langhantel)
+        context.insert(bench)
+        finishedSession(bench, sets: [(50, 10, .normal)], start: .now.addingTimeInterval(-7200))
+        finishedSession(bench, sets: [(40, 12, .aufwaermen), (60, 8, .normal), (62.5, 6, .normal)])
+
+        let running = WorkoutSession(plan: nil, gym: nil)
+        context.insert(running)
+        let entry = WorkoutFactory.addExercise(bench, to: running, targetSets: 3, in: context)
+        entry.sortedSets[0].isCompleted = true  // the running session itself is ignored
+
+        let previous = WorkoutStats.previousSets(for: entry)
+        #expect(previous.map(\.weight) == [40, 60, 62.5])
+        #expect(previous.map(\.reps) == [12, 8, 6])
+    }
+
+    @Test func currentExerciseIsFirstWithOpenSets() {
+        let session = session(with: ["A", "B"])
+        let e = session.sortedExercises
+        #expect(WorkoutStats.currentExercise(in: session) === e[0])
+
+        e[0].sets.forEach { $0.isCompleted = true }
+        #expect(WorkoutStats.currentExercise(in: session) === e[1])
+
+        e[1].sets.forEach { $0.isCompleted = true }
+        #expect(WorkoutStats.currentExercise(in: session) == nil)
+    }
+
     @Test func onlyWarmupsDoNotCountAsRecord() {
         let bench = Exercise(name: "Bankdrücken", muscleGroup: .brust, equipment: .langhantel)
         context.insert(bench)
