@@ -122,32 +122,15 @@ struct PlanEditorView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 10) {
-            Image(systemName: "list.bullet.clipboard")
-                .font(.system(size: 40))
-                .foregroundStyle(.tint)
-                .padding(.bottom, 4)
-            Text("Noch keine Übungen")
-                .font(.headline)
-            Text("Wähle die Übungen in der Reihenfolge, in der du sie trainierst. Sätze und Pausen stellst du danach ein.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-            Button {
-                nameFocused = false
-                showPicker = true
-            } label: {
-                Label("Übungen wählen", systemImage: "plus")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .padding(.top, 6)
+        EmptyStateRow(
+            systemImage: "list.bullet.clipboard",
+            title: "Noch keine Übungen",
+            message: "Wähle die Übungen in der Reihenfolge, in der du sie trainierst. Sätze und Pausen stellst du danach ein.",
+            buttonTitle: "Übungen wählen"
+        ) {
+            nameFocused = false
+            showPicker = true
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
     }
 
     @ViewBuilder

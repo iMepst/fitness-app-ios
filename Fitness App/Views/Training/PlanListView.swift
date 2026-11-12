@@ -74,15 +74,13 @@ struct PlanListView: View {
         let next = WorkoutPlan.next(in: plans)
         Section {
             if plans.isEmpty {
-                ContentUnavailableView {
-                    Label("Noch keine Pläne", systemImage: "list.bullet.clipboard")
-                } description: {
-                    Text("Lege Pläne wie Push, Pull oder Beine an. Sätze, Wiederholungen und Pausen werden beim Training vorausgefüllt.")
-                } actions: {
-                    Button("Ersten Plan erstellen", systemImage: "plus", action: createPlan)
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.large)
-                }
+                EmptyStateRow(
+                    systemImage: "list.bullet.clipboard",
+                    title: "Noch keine Pläne",
+                    message: "Lege Pläne wie Push, Pull oder Beine an. Sätze, Wiederholungen und Pausen werden beim Training vorausgefüllt.",
+                    buttonTitle: "Ersten Plan erstellen",
+                    action: createPlan
+                )
             }
             ForEach(plans) { plan in
                 NavigationLink(value: plan) {
