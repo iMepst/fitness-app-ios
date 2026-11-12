@@ -83,11 +83,14 @@ struct PlanListView: View {
                 )
             }
             ForEach(plans) { plan in
-                NavigationLink(value: plan) {
-                    PlanRow(plan: plan, isNext: plan === next, canStart: canStart) { onStart(plan) }
-                }
+                // Not a NavigationLink: on device, tapping the play button inside a
+                // NavigationLink row also pushed the plan page under the workout.
+                PlanRow(plan: plan, isNext: plan === next, canStart: canStart) { start(plan) }
+                    .contentShape(.rect)
+                    .onTapGesture { path.append(plan) }
+                    .accessibilityAction(named: "Plan öffnen") { path.append(plan) }
                 .contextMenu {
-                    Button("Training starten", systemImage: "play.fill") { onStart(plan) }
+                    Button("Training starten", systemImage: "play.fill") { start(plan) }
                         .disabled(!canStart || plan.entries.isEmpty)
                     Button("Bearbeiten", systemImage: "pencil") { path.append(plan) }
                     Divider()
@@ -103,6 +106,13 @@ struct PlanListView: View {
                 Text("„Als Nächstes“ ist der Plan, den du am längsten nicht trainiert hast.")
             }
         }
+    }
+
+    /// Starts from the list: return to the list root first, so nothing that got
+    /// pushed is left behind the workout (you come back to the home screen after it).
+    private func start(_ plan: WorkoutPlan) {
+        path.removeAll()
+        onStart(plan)
     }
 
     /// Inserts a hidden draft; `NewPlanSheet` either saves it or deletes it again.
@@ -293,7 +303,10 @@ private struct PlanRow: View {
             details: details,
             tag: isNext ? "Als Nächstes" : nil
         ) {
-            StartButton(isEnabled: canStart && !plan.entries.isEmpty, label: "\(plan.name) starten", action: onStart)
+            HStack(spacing: 12) {
+                StartButton(isEnabled: canStart && !plan.entries.isEmpty, label: "\(plan.name) starten", action: onStart)
+                RowChevron()
+            }
         }
     }
 
