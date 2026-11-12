@@ -112,6 +112,16 @@ struct GymDetailView: View {
             }
 
             Section {
+                NavigationLink {
+                    StudioEditForm(gym: gym)
+                } label: {
+                    Label("Standort, Öffnungszeiten, Vertrag", systemImage: "building.2")
+                }
+            } footer: {
+                Text("Diese Infos zeigt der Tab „Studio“ für dein aktives Studio.")
+            }
+
+            Section {
                 ForEach(machines) { machine in
                     NavigationLink {
                         ExerciseDetailView(exercise: machine)
