@@ -190,4 +190,28 @@ struct StatsTests {
         let dates = TrainingStats.recentRecords(allSessions, limit: 5).compactMap(\.session?.startDate)
         #expect(dates == [date(10), date(3)])
     }
+
+    // MARK: - Body weight sync
+
+    @Test func bodyWeightMergeSkipsKnownAndIgnoredSamples() throws {
+        let known = UUID(), ignored = UUID(), fresh = UUID()
+        context.insert(BodyWeightEntry(date: date(1), kg: 82, healthKitUUID: known))
+        context.insert(BodyWeightEntry(date: date(2), kg: 81.8))  // manual, not in Health yet
+        let existing = try context.fetch(FetchDescriptor<BodyWeightEntry>())
+
+        let samples = [
+            BodyWeightSync.Sample(id: known, date: date(1), kg: 82),
+            BodyWeightSync.Sample(id: ignored, date: date(3), kg: 81.5),
+            BodyWeightSync.Sample(id: fresh, date: date(4), kg: 81.2),
+            BodyWeightSync.Sample(id: fresh, date: date(4), kg: 81.2),  // duplicate in the same batch
+            BodyWeightSync.Sample(id: UUID(), date: date(5), kg: 0),    // invalid
+        ]
+        let added = BodyWeightSync.merge(samples, existing: existing, ignored: [ignored], into: context)
+        #expect(added == 1)
+
+        let all = try context.fetch(FetchDescriptor<BodyWeightEntry>())
+        #expect(all.count == 3)
+        #expect(all.contains { $0.healthKitUUID == fresh && $0.kg == 81.2 })
+        #expect(!all.contains { $0.healthKitUUID == ignored })
+    }
 }

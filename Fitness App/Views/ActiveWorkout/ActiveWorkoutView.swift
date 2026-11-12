@@ -224,6 +224,7 @@ struct ActiveWorkoutView: View {
         restTimer.stop()
         if WorkoutFactory.finish(session, in: modelContext) {
             withAnimation { isFinished = true }
+            Task { await HealthSync.export(session, in: modelContext) }
         }
     }
 

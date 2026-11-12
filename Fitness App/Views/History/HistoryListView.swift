@@ -33,6 +33,7 @@ struct HistoryListView: View {
                         }
                         .onDelete { offsets in
                             for index in offsets {
+                                HealthSync.deleteWorkout(id: group.sessions[index].healthKitWorkoutID)
                                 modelContext.delete(group.sessions[index])
                             }
                             try? modelContext.save()

@@ -26,6 +26,8 @@ struct StatsView: View {
                 bodyWeightSection
             }
             .navigationTitle("Statistik")
+            .task { await HealthSync.importBodyWeights(in: modelContext) }
+            .refreshable { await HealthSync.importBodyWeights(in: modelContext) }
             .sheet(isPresented: $showAddWeight) {
                 BodyWeightEditor()
                     .presentationDetents([.medium])
@@ -224,7 +226,10 @@ struct StatsView: View {
                 }
                 .onDelete { offsets in
                     let shown = Array(bodyWeights.prefix(10))
-                    for index in offsets { modelContext.delete(shown[index]) }
+                    for index in offsets {
+                        HealthSync.deleteBodyWeight(id: shown[index].healthKitUUID)
+                        modelContext.delete(shown[index])
+                    }
                     try? modelContext.save()
                 }
             }
@@ -278,8 +283,11 @@ struct BodyWeightEditor: View {
     }
 
     private func save() {
-        modelContext.insert(BodyWeightEntry(date: date, kg: kg))
+        let entry = BodyWeightEntry(date: date, kg: kg)
+        modelContext.insert(entry)
         try? modelContext.save()
+        let context = modelContext
+        Task { await HealthSync.exportBodyWeight(entry, in: context) }
         dismiss()
     }
 }
