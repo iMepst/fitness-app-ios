@@ -181,4 +181,31 @@ struct LoggingTests {
         sets.forEach(context.insert)
         #expect(WorkoutStats.setNumbers(sets) == [0, 0, 1, 2, 2, 3])
     }
+
+    // MARK: - Live Activity state
+
+    @Test func activityStateFollowsWorkoutProgress() {
+        let session = session(with: ["Bankdrücken", "Rudern"])
+        let entries = session.sortedExercises
+        let timer = RestTimer()
+
+        var state = WorkoutActivityController.state(for: session, rest: timer)
+        #expect(state.currentExercise == "Bankdrücken")
+        #expect(state.completedSets == 0)
+        #expect(state.restEnd == nil && !state.isResting)
+
+        for set in entries[0].sets { set.isCompleted = true }
+        entries[1].sortedSets[0].isCompleted = true
+        timer.start(seconds: 90)
+        state = WorkoutActivityController.state(for: session, rest: timer)
+        #expect(state.currentExercise == "Rudern")
+        #expect(state.completedSets == entries[0].sets.count + 1)
+        #expect(state.isResting)
+        timer.stop()
+
+        for set in entries[1].sets { set.isCompleted = true }
+        state = WorkoutActivityController.state(for: session, rest: timer)
+        #expect(state.currentExercise == "Rudern", "all done – keeps showing the last exercise")
+        #expect(!state.isResting)
+    }
 }

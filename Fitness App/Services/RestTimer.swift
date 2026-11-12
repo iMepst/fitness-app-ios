@@ -6,6 +6,9 @@ import UserNotifications
 /// end of the rest is signalled while the phone is locked.
 @Observable
 final class RestTimer {
+    /// One timer for the whole app so Live Activity buttons (App Intents) can reach it.
+    static let shared = RestTimer()
+
     private(set) var startDate: Date?
     private(set) var endDate: Date?
     /// Increments every time a countdown runs out (drives haptics).
@@ -21,12 +24,14 @@ final class RestTimer {
         startDate = now
         endDate = now.addingTimeInterval(TimeInterval(seconds))
         reschedule()
+        notifyActivity()
     }
 
     func adjust(by seconds: Int) {
         guard let end = endDate else { return }
         endDate = max(end.addingTimeInterval(TimeInterval(seconds)), Date.now.addingTimeInterval(1))
         reschedule()
+        notifyActivity()
     }
 
     func stop() {
@@ -35,6 +40,11 @@ final class RestTimer {
         startDate = nil
         endDate = nil
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [Self.notificationID])
+        notifyActivity()
+    }
+
+    private func notifyActivity() {
+        WorkoutActivityController.shared.restChanged(start: startDate, end: endDate)
     }
 
     private func reschedule() {
@@ -47,6 +57,7 @@ final class RestTimer {
             self.startDate = nil
             self.endDate = nil
             self.finishCount += 1
+            self.notifyActivity()
         }
         scheduleNotification(after: remaining)
     }

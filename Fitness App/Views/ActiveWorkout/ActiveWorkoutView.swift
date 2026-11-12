@@ -7,7 +7,7 @@ struct ActiveWorkoutView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
 
-    @State private var restTimer = RestTimer()
+    @State private var restTimer = RestTimer.shared
     @State private var showPicker = false
     @State private var showFinishDialog = false
     @State private var showDiscardDialog = false
@@ -201,8 +201,18 @@ struct ActiveWorkoutView: View {
             Text("Hake mindestens einen Satz ab, um das Training zu speichern.")
         }
         .task {
+            WorkoutActivityController.shared.start(for: session)
             await RestTimer.requestAuthorization()
         }
+        .onChange(of: activitySignature) {
+            WorkoutActivityController.shared.update(for: session)
+        }
+    }
+
+    /// Changes whenever something shown in the Live Activity changes.
+    private var activitySignature: String {
+        let current = session.sortedExercises.first { $0.sets.contains { !$0.isCompleted } }?.exerciseName ?? ""
+        return "\(session.completedSets.count)|\(session.exercises.count)|\(current)"
     }
 
     private var openSetCount: Int {
@@ -222,6 +232,7 @@ struct ActiveWorkoutView: View {
 
     private func finish() {
         restTimer.stop()
+        WorkoutActivityController.shared.end()
         if WorkoutFactory.finish(session, in: modelContext) {
             withAnimation { isFinished = true }
             Task { await HealthSync.export(session, in: modelContext) }
@@ -230,6 +241,7 @@ struct ActiveWorkoutView: View {
 
     private func discard() {
         restTimer.stop()
+        WorkoutActivityController.shared.end()
         dismiss()
         WorkoutFactory.discard(session, in: modelContext)
     }
