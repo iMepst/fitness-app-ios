@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 
 /// Toolbar menu to switch the active gym or open gym management.
+/// Pair it with `.activeGymSubtitle()` on the same screen.
 struct GymMenu: View {
     @Query(sort: \Gym.createdAt) private var gyms: [Gym]
     @AppStorage(AppSettings.activeGymIDKey) private var activeGymID = ""
@@ -19,13 +20,10 @@ struct GymMenu: View {
                 showManager = true
             }
         } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "mappin.and.ellipse")
-                Text(gyms.active(id: activeGymID)?.name ?? "Kein Studio")
-                    .lineLimit(1)
-            }
-            .padding(.horizontal, 4)
-            .accessibilityLabel("Studio: \(gyms.active(id: activeGymID)?.name ?? "Kein Studio")")
+            // Icon only: the gym's name is shown as the navigation subtitle
+            // (`activeGymSubtitle()`), so the collapsed title keeps its room.
+            Image(systemName: "mappin.and.ellipse")
+                .accessibilityLabel("Studio: \(gyms.active(id: activeGymID)?.name ?? "Kein Studio")")
         }
         .sheet(isPresented: $showManager) {
             NavigationStack {
@@ -44,5 +42,21 @@ struct GymMenu: View {
             get: { gyms.active(id: activeGymID)?.id.uuidString ?? "" },
             set: { activeGymID = $0 }
         )
+    }
+}
+
+/// Shows the active gym's name as the navigation subtitle (under the large title).
+private struct ActiveGymSubtitle: ViewModifier {
+    @Query(sort: \Gym.createdAt) private var gyms: [Gym]
+    @AppStorage(AppSettings.activeGymIDKey) private var activeGymID = ""
+
+    func body(content: Content) -> some View {
+        content.navigationSubtitle(gyms.active(id: activeGymID)?.name ?? "Kein Studio")
+    }
+}
+
+extension View {
+    func activeGymSubtitle() -> some View {
+        modifier(ActiveGymSubtitle())
     }
 }

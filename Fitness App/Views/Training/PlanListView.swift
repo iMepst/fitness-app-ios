@@ -42,6 +42,7 @@ struct PlanListView: View {
                 }
             }
             .navigationTitle("Training")
+            .activeGymSubtitle()
             .navigationDestination(for: WorkoutPlan.self) { plan in
                 PlanEditorView(plan: plan, canStart: canStart) { onStart(plan) }
             }

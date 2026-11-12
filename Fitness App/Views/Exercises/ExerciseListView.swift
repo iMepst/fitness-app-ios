@@ -23,6 +23,7 @@ struct ExerciseListView: View {
             }
             .searchable(text: $search, prompt: "Übung suchen")
             .navigationTitle("Übungen")
+            .activeGymSubtitle()
             .navigationDestination(for: ExerciseCategory.self) { category in
                 ExerciseCategoryView(category: category)
             }

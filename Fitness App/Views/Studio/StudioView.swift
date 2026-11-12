@@ -28,6 +28,7 @@ struct StudioView: View {
                 }
             }
             .navigationTitle("Mein Studio")
+            .activeGymSubtitle()
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     GymMenu()

@@ -59,7 +59,8 @@ struct ExerciseCategoryView: View {
                 }
             }
         }
-        .navigationTitle(category == .gymMachines ? "Geräte – \(activeGym?.name ?? "")" : category.title)
+        .navigationTitle(category.title)
+        .navigationSubtitle(category == .gymMachines ? activeGym?.name ?? "" : "")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button("Neue Übung", systemImage: "plus") { showEditor = true }
