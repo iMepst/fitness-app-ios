@@ -17,11 +17,11 @@ struct ExerciseEditorView: View {
     @State private var notes: String
     @State private var gymOnly: Bool
 
-    init(exercise: Exercise?, defaultGym: Gym?, preferMachine: Bool = false) {
+    init(exercise: Exercise?, defaultGym: Gym?, preferMachine: Bool = false, defaultMuscleGroup: MuscleGroup? = nil) {
         self.exercise = exercise
         self.defaultGym = defaultGym
         _name = State(initialValue: exercise?.name ?? "")
-        _muscleGroup = State(initialValue: exercise?.muscleGroup ?? .brust)
+        _muscleGroup = State(initialValue: exercise?.muscleGroup ?? defaultMuscleGroup ?? .brust)
         _equipment = State(initialValue: exercise?.equipment ?? (preferMachine ? .maschine : .kurzhantel))
         _notes = State(initialValue: exercise?.notes ?? "")
         _gymOnly = State(initialValue: exercise.map { $0.gym != nil } ?? preferMachine)
