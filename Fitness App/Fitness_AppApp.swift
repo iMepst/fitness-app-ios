@@ -29,6 +29,11 @@ struct Fitness_AppApp: App {
         }
 
         UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
+
+        // Cancellation deadlines roll forward each period – keep reminders current.
+        if let gyms = try? modelContainer.mainContext.fetch(FetchDescriptor<Gym>()) {
+            ContractReminder.rescheduleAll(gyms)
+        }
     }
 
     var body: some Scene {

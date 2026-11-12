@@ -43,10 +43,20 @@ struct ActiveWorkoutView: View {
                             .monospacedDigit()
                     }
                 }
-                if !session.gymName.isEmpty {
-                    Label(session.gymName, systemImage: "mappin.and.ellipse")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                if !session.gymName.isEmpty || session.gym?.currentLocker() != nil {
+                    HStack {
+                        if !session.gymName.isEmpty {
+                            Label(session.gymName, systemImage: "mappin.and.ellipse")
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        if let locker = session.gym?.currentLocker() {
+                            Label("Spind \(locker)", systemImage: "lock.fill")
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.tint)
+                        }
+                    }
+                    .font(.subheadline)
                 }
             }
 

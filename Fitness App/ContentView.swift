@@ -33,6 +33,9 @@ struct ContentView: View {
             Tab("Übungen", systemImage: "list.bullet.rectangle.portrait") {
                 ExerciseListView()
             }
+            Tab("Studio", systemImage: "building.2") {
+                StudioView()
+            }
         }
         .fullScreenCover(item: $presentedSession) { session in
             ActiveWorkoutView(session: session)
