@@ -62,10 +62,17 @@ extension Gym {
         return lockerNumber
     }
 
+    static let lockerMaxDigits = 5
+
+    /// Keeps only the digits (locker numbers are plain numbers), at most `lockerMaxDigits`.
+    static func lockerDigits(_ text: String) -> String {
+        String(text.filter { $0.isASCII && $0.isNumber }.prefix(lockerMaxDigits))
+    }
+
     func setLocker(_ number: String?, now: Date = .now) {
-        let trimmed = number?.trimmingCharacters(in: .whitespaces) ?? ""
-        lockerNumber = trimmed.isEmpty ? nil : trimmed
-        lockerSetAt = trimmed.isEmpty ? nil : now
+        let digits = Self.lockerDigits(number ?? "")
+        lockerNumber = digits.isEmpty ? nil : digits
+        lockerSetAt = digits.isEmpty ? nil : now
     }
 }
 

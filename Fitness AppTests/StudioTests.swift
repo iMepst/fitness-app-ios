@@ -158,5 +158,16 @@ struct LockerTests {
         #expect(gym.lockerNumber == nil)
         #expect(gym.currentLocker() == nil)
     }
+
+    @Test func lockerKeepsOnlyDigits() {
+        let gym = Gym(name: "A")
+        gym.setLocker("Nr. 1-42")
+        #expect(gym.lockerNumber == "142")
+        gym.setLocker("1234567")
+        #expect(gym.lockerNumber == "12345")
+        gym.setLocker("abc")
+        #expect(gym.lockerNumber == nil)
+        #expect(Gym.lockerDigits("٣4") == "4", "only ASCII digits")
+    }
 }
 

@@ -235,13 +235,17 @@ private struct LockerCard: View {
             } else {
                 HStack {
                     TextField("Spindnummer", text: $input)
-                        .keyboardType(.numbersAndPunctuation)
-                        .submitLabel(.done)
+                        .keyboardType(.numberPad)
+                        .monospacedDigit()
                         .focused($focused)
-                        .onSubmit { save(input) }
+                        .onChange(of: input) { _, newValue in
+                            // Number pad only, but pasted text can still contain other characters.
+                            let digits = Gym.lockerDigits(newValue)
+                            if digits != newValue { input = digits }
+                        }
                     Button("Merken") { save(input) }
                         .buttonStyle(.borderedProminent)
-                        .disabled(input.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .disabled(input.isEmpty)
                 }
             }
         }
