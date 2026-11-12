@@ -275,4 +275,47 @@ struct LoggingTests {
         #expect(state.currentExercise == "Rudern", "all done – keeps showing the last exercise")
         #expect(!state.isResting)
     }
+
+    // MARK: - Training home
+
+    private func plan(_ name: String, index: Int, lastDone: Date?, exercise: Exercise) -> WorkoutPlan {
+        let plan = WorkoutPlan(name: name, sortIndex: index)
+        context.insert(plan)
+        let entry = PlanEntry(sortIndex: 0)
+        context.insert(entry)
+        entry.exercise = exercise
+        plan.entries.append(entry)
+        if let lastDone {
+            let session = WorkoutSession(startDate: lastDone, plan: plan, gym: nil)
+            context.insert(session)
+            session.endDate = lastDone.addingTimeInterval(3600)
+        }
+        return plan
+    }
+
+    @Test func nextPlanIsTheOneDoneLongestAgo() {
+        let squat = Exercise(name: "Kniebeuge", muscleGroup: .beine, equipment: .langhantel)
+        context.insert(squat)
+        let push = plan("Push", index: 0, lastDone: .now.addingTimeInterval(-86_400 * 2), exercise: squat)
+        let pull = plan("Pull", index: 1, lastDone: .now.addingTimeInterval(-86_400 * 4), exercise: squat)
+        #expect(WorkoutPlan.next(in: [push, pull]) === pull)
+
+        let legs = plan("Beine", index: 2, lastDone: nil, exercise: squat)
+        #expect(WorkoutPlan.next(in: [push, pull, legs]) === legs)
+
+        // A single startable plan is never "next" (nothing to choose between).
+        let empty = WorkoutPlan(name: "Leer", sortIndex: 3)
+        context.insert(empty)
+        #expect(WorkoutPlan.next(in: [push, empty]) == nil)
+    }
+
+    @Test func daysAgoUsesCalendarDays() {
+        let calendar = TrainingStats.calendar
+        let now = calendar.date(from: DateComponents(year: 2026, month: 11, day: 12, hour: 9))!
+        func ago(_ days: Int) -> Date { calendar.date(byAdding: .day, value: -days, to: now)! }
+        #expect(Format.daysAgo(now, now: now, calendar: calendar) == "heute")
+        #expect(Format.daysAgo(ago(1), now: now, calendar: calendar) == "gestern")
+        #expect(Format.daysAgo(ago(5), now: now, calendar: calendar) == "vor 5 Tagen")
+        #expect(Format.daysAgo(ago(21), now: now, calendar: calendar) == "vor 3 Wochen")
+    }
 }

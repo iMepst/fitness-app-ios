@@ -34,6 +34,18 @@ enum Format {
         value.formatted(.number.precision(.fractionLength(0...1)))
     }
 
+    /// "heute", "gestern", "vor 5 Tagen", "vor 3 Wochen" – by calendar days.
+    static func daysAgo(_ date: Date, now: Date = .now, calendar: Calendar = .current) -> String {
+        let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: date), to: calendar.startOfDay(for: now)).day ?? 0
+        switch days {
+        case ..<1: return "heute"
+        case 1: return "gestern"
+        case 2..<14: return "vor \(days) Tagen"
+        case 14..<60: return "vor \(days / 7) Wochen"
+        default: return "vor \(days / 30) Monaten"
+        }
+    }
+
     static func count(_ n: Int, _ singular: String, _ plural: String) -> String {
         "\(n) \(n == 1 ? singular : plural)"
     }

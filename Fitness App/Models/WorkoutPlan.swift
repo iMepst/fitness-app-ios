@@ -28,6 +28,31 @@ final class WorkoutPlan {
     var lastPerformed: Date? {
         sessions.filter { $0.endDate != nil }.map(\.startDate).max()
     }
+
+    /// Muscle groups trained by the plan, most sets first.
+    var muscleGroups: [MuscleGroup] {
+        var sets: [MuscleGroup: Int] = [:]
+        for entry in entries {
+            guard let muscle = entry.exercise?.muscleGroup else { continue }
+            sets[muscle, default: 0] += entry.targetSets
+        }
+        return sets.sorted { $0.value != $1.value ? $0.value > $1.value : $0.key.rawValue < $1.key.rawValue }.map(\.key)
+    }
+
+    /// In a rotation (Push/Pull/Beine …) the plan due next is the one done longest ago;
+    /// plans never done come first. `nil` with fewer than two startable plans.
+    static func next(in plans: [WorkoutPlan]) -> WorkoutPlan? {
+        let startable = plans.filter { !$0.entries.isEmpty }
+        guard startable.count > 1 else { return nil }
+        return startable.min { a, b in
+            switch (a.lastPerformed, b.lastPerformed) {
+            case (nil, nil): a.sortIndex < b.sortIndex
+            case (nil, _): true
+            case (_, nil): false
+            case let (x?, y?): x < y
+            }
+        }
+    }
 }
 
 @Model

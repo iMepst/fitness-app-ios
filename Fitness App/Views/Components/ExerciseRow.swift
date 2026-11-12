@@ -10,9 +10,11 @@ struct ExerciseDetail: Hashable {
 /// details and optional superset/status tags. Used by the plan editor, the
 /// running workout and the workout summary so they look alike.
 struct ExerciseRow<Trailing: View>: View {
-    let muscleGroup: MuscleGroup?
+    let icon: MuscleIcon
     let name: String
     var gymName: String?
+    /// Secondary line between name and details (e.g. a plan's muscle groups).
+    var subtitle: String?
     var details: [ExerciseDetail] = []
     var supersetLabel: String?
     /// Small accent capsule next to the name, e.g. "Jetzt".
@@ -23,7 +25,7 @@ struct ExerciseRow<Trailing: View>: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            MuscleIcon(group: muscleGroup, size: 40)
+            icon
                 .overlay(alignment: .bottomTrailing) {
                     if isDone {
                         Image(systemName: "checkmark.circle.fill")
@@ -57,6 +59,12 @@ struct ExerciseRow<Trailing: View>: View {
                             .padding(.vertical, 2)
                             .background(Color.accentColor, in: Capsule())
                     }
+                }
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
                 if !details.isEmpty {
                     HStack(spacing: 12) {
@@ -94,18 +102,39 @@ struct ExerciseRow<Trailing: View>: View {
     }
 }
 
+extension ExerciseRow {
+    /// Row with the muscle group's icon.
+    init(
+        muscleGroup: MuscleGroup?,
+        name: String,
+        gymName: String? = nil,
+        subtitle: String? = nil,
+        details: [ExerciseDetail] = [],
+        supersetLabel: String? = nil,
+        tag: String? = nil,
+        isDone: Bool = false,
+        @ViewBuilder trailing: () -> Trailing
+    ) {
+        self.init(
+            icon: MuscleIcon(group: muscleGroup), name: name, gymName: gymName, subtitle: subtitle,
+            details: details, supersetLabel: supersetLabel, tag: tag, isDone: isDone, trailing: trailing
+        )
+    }
+}
+
 extension ExerciseRow where Trailing == EmptyView {
     init(
         muscleGroup: MuscleGroup?,
         name: String,
         gymName: String? = nil,
+        subtitle: String? = nil,
         details: [ExerciseDetail] = [],
         supersetLabel: String? = nil,
         tag: String? = nil,
         isDone: Bool = false
     ) {
         self.init(
-            muscleGroup: muscleGroup, name: name, gymName: gymName, details: details,
+            muscleGroup: muscleGroup, name: name, gymName: gymName, subtitle: subtitle, details: details,
             supersetLabel: supersetLabel, tag: tag, isDone: isDone
         ) { EmptyView() }
     }
