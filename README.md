@@ -10,35 +10,35 @@ A modern, offline-first iOS fitness and strength tracking app built natively wit
 
 ---
 
-## ✨ Features
+## Features
 
-### 🏋️‍♂️ Smart Workout Tracking & Plans
+### Workout Tracking & Plans
 - **Routine Builder**: Create structured workout routines (e.g. *Push*, *Pull*, *Legs*) with target sets, rep ranges, and rest periods.
 - **Auto-Prefill from History**: Starting an exercise automatically pre-fills weights and reps based on your last completed session for seamless progressive overload.
 - **Active Workout HUD**: Live set logger, set reordering, inline decimal weight input, and completion summary modal (duration, total volume, completed sets).
 - **Free Workouts**: Jump straight into a workout without a pre-set routine.
 
-### ⏱️ Rest Timer & Haptics
+### Rest Timer & Haptics
 - **Background Rest Countdown**: Observable countdown between sets with live lock-screen local notifications (`UserNotifications`).
 - **Quick Adjustments**: On-the-fly $+30\,\text{s}$ and $-15\,\text{s}$ interval adjustments right from the active workout screen.
 
-### 🏢 Studio & Gym Management
+### Studio & Gym Management
 - **Studio-Bound Machines**: Weight stacks differ across gym brands and models; the app binds custom machines to specific gyms to ensure accurate history comparisons.
 - **Locker Tracker**: Never forget your locker number—set your locker with instant verification and automatic 12-hour expiration.
 - **MapKit Transit Finder**: Instant search for nearby public transit stops (bus, U-Bahn, S-Bahn) and estimated walking distances from your studio.
 
-### 📄 Membership & Contract Deadlines
+### Membership & Contract Deadlines
 - **Statutory German Contract Engine**: Calculates exact cancellation deadlines according to statutory rolling renewal rules.
 - **Automated Deadline Reminders**: Local calendar notifications alert you before your cancellation deadline so contracts don't roll over unintentionally.
 
-### 📊 Exercise Catalog & Analytics
+### Exercise Catalog & Analytics
 - **Visual Category Grid**: Shortcuts-style category tiles with SF Symbols and tactile spring animations.
 - **Equipment Filtering**: Group exercises by barbell, dumbbell, machine, cable, or bodyweight.
 - **Progression Analytics**: 1RM calculation using the Epley formula ($1\text{RM} = w \cdot (1 + r/30)$) and historical workout performance logs.
 
 ---
 
-## 🛠️ Architecture & Tech Stack
+## Architecture & Tech Stack
 
 ```
 Fitness App/
@@ -78,7 +78,7 @@ Fitness App/
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 - macOS Sonoma (14.0+) or later
@@ -99,7 +99,7 @@ Fitness App/
 
 ---
 
-## 🧪 Running Tests
+## Running Tests
 
 The test suite covers pure domain logic (1RM calculations, prefilling logic, session completion, contract calculations, and locker expiration):
 
@@ -109,6 +109,6 @@ xcodebuild test -project "Fitness App.xcodeproj" -scheme "Fitness App" -destinat
 
 ---
 
-## 📄 License
+## License
 
 This project is open-source and available under the [MIT License](LICENSE).
