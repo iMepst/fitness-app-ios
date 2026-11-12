@@ -17,8 +17,10 @@ enum WorkoutStats {
         return weight * (1 + Double(reps) / 30)
     }
 
+    /// Volume of completed working sets (warm-ups excluded).
     static func volume(of sets: [SetEntry]) -> Double {
-        sets.filter(\.isCompleted).reduce(0) { $0 + $1.weight * Double($1.reps) }
+        sets.filter { $0.isCompleted && $0.kind.countsAsWorkingSet }
+            .reduce(0) { $0 + $1.weight * Double($1.reps) }
     }
 
     /// Universal exercises plus the machines of the active gym.
@@ -45,13 +47,13 @@ enum WorkoutStats {
     }
 
     static func bestOneRepMax(of entry: SessionExercise) -> Double {
-        entry.sets.filter(\.isCompleted).map { estimatedOneRepMax(weight: $0.weight, reps: $0.reps) }.max() ?? 0
+        entry.workingSets.map { estimatedOneRepMax(weight: $0.weight, reps: $0.reps) }.max() ?? 0
     }
 
     static func progress(for exercise: Exercise) -> [ProgressPoint] {
         finishedEntries(for: exercise)
             .compactMap { entry -> ProgressPoint? in
-                let sets = entry.sets.filter(\.isCompleted)
+                let sets = entry.workingSets
                 guard let date = entry.session?.startDate, !sets.isEmpty else { return nil }
                 return ProgressPoint(
                     id: entry.persistentModelID,
@@ -73,18 +75,25 @@ enum WorkoutStats {
         return current > (previous.map { bestOneRepMax(of: $0) }.max() ?? 0)
     }
 
-    /// "3 × 8 @ 80 kg" when all sets are equal, otherwise "80 kg × 8 · 75 kg × 8".
+    /// "3 × 8 @ 80 kg" when all working sets are equal, otherwise "80 kg × 8 · 75 kg × 8".
+    /// Warm-ups are left out and mentioned as "+ 2 Aufwärmsätze".
     static func summary(of entry: SessionExercise) -> String {
-        let sets = entry.sortedSets.filter(\.isCompleted)
-        guard let first = sets.first else { return "–" }
+        let completed = entry.sortedSets.filter(\.isCompleted)
+        let sets = completed.filter(\.kind.countsAsWorkingSet)
+        let warmups = completed.count - sets.count
+        let warmupText = Format.count(warmups, "Aufwärmsatz", "Aufwärmsätze")
+        guard let first = sets.first else { return warmups > 0 ? warmupText : "–" }
+
+        let main: String
         if sets.allSatisfy({ $0.weight == first.weight && $0.reps == first.reps }) {
-            if first.weight > 0 {
-                return "\(sets.count) × \(first.reps) @ \(Format.weight(first.weight)) kg"
-            }
-            return "\(sets.count) × \(first.reps) Wdh."
+            main = first.weight > 0
+                ? "\(sets.count) × \(first.reps) @ \(Format.weight(first.weight)) kg"
+                : "\(sets.count) × \(first.reps) Wdh."
+        } else {
+            main = sets
+                .map { $0.weight > 0 ? "\(Format.weight($0.weight)) kg × \($0.reps)" : "\($0.reps) Wdh." }
+                .joined(separator: " · ")
         }
-        return sets
-            .map { $0.weight > 0 ? "\(Format.weight($0.weight)) kg × \($0.reps)" : "\($0.reps) Wdh." }
-            .joined(separator: " · ")
+        return warmups > 0 ? "\(main) + \(warmupText)" : main
     }
 }

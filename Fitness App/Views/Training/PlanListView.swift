@@ -12,6 +12,7 @@ struct PlanListView: View {
     @State private var path: [WorkoutPlan] = []
     @State private var showNewPlanAlert = false
     @State private var newPlanName = ""
+    @State private var showSettings = false
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -76,6 +77,14 @@ struct PlanListView: View {
                         showNewPlanAlert = true
                     }
                 }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Einstellungen", systemImage: "gearshape") {
+                        showSettings = true
+                    }
+                }
+            }
+            .sheet(isPresented: $showSettings) {
+                SettingsView()
             }
             .alert("Neuer Plan", isPresented: $showNewPlanAlert) {
                 TextField("Name, z. B. Push", text: $newPlanName)

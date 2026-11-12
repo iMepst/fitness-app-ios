@@ -35,6 +35,8 @@ final class PlanEntry {
     var repsMin: Int
     var repsMax: Int
     var restSeconds: Int
+    /// Entries sharing a group number form a superset.
+    var supersetGroup: Int?
 
     var exercise: Exercise?
     var plan: WorkoutPlan?

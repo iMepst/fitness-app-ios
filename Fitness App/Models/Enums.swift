@@ -24,3 +24,34 @@ enum Equipment: String, CaseIterable, Identifiable, Codable {
 
     var id: String { rawValue }
 }
+
+enum SetKind: String, CaseIterable, Identifiable, Codable {
+    case normal
+    case aufwaermen
+    case drop
+    case versagen
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .normal: "Arbeitssatz"
+        case .aufwaermen: "Aufwärmsatz"
+        case .drop: "Dropsatz"
+        case .versagen: "Bis zum Versagen"
+        }
+    }
+
+    /// Short badge shown instead of the set number; `nil` for normal sets.
+    var badge: String? {
+        switch self {
+        case .normal: nil
+        case .aufwaermen: "W"
+        case .drop: "D"
+        case .versagen: "F"
+        }
+    }
+
+    /// Warm-ups don't count towards volume, 1RM or records.
+    var countsAsWorkingSet: Bool { self != .aufwaermen }
+}

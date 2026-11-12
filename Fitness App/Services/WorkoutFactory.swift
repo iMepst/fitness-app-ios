@@ -15,6 +15,8 @@ enum WorkoutFactory {
                     targetSets: entry.targetSets,
                     defaultReps: entry.repsMin,
                     restSeconds: entry.restSeconds,
+                    supersetGroup: entry.supersetGroup,
+                    targetReps: entry.repsMin...max(entry.repsMin, entry.repsMax),
                     in: context
                 )
             }
@@ -32,10 +34,15 @@ enum WorkoutFactory {
         targetSets: Int? = nil,
         defaultReps: Int = 10,
         restSeconds: Int = 90,
+        supersetGroup: Int? = nil,
+        targetReps: ClosedRange<Int>? = nil,
         in context: ModelContext
     ) -> SessionExercise {
         let nextIndex = (session.exercises.map(\.sortIndex).max() ?? -1) + 1
         let entry = SessionExercise(exercise: exercise, sortIndex: nextIndex, restSeconds: restSeconds)
+        entry.supersetGroup = supersetGroup
+        entry.targetRepsMin = targetReps?.lowerBound
+        entry.targetRepsMax = targetReps?.upperBound
         context.insert(entry)
         session.exercises.append(entry)
 
@@ -45,7 +52,12 @@ enum WorkoutFactory {
 
         for index in 0..<count {
             let template = previous.isEmpty ? nil : previous[min(index, previous.count - 1)]
-            let set = SetEntry(sortIndex: index, weight: template?.weight ?? 0, reps: template?.reps ?? defaultReps)
+            let set = SetEntry(
+                sortIndex: index,
+                weight: template?.weight ?? 0,
+                reps: template?.reps ?? defaultReps,
+                kind: template?.kind ?? .normal
+            )
             context.insert(set)
             entry.sets.append(set)
         }
@@ -57,7 +69,9 @@ enum WorkoutFactory {
         let set = SetEntry(
             sortIndex: (last?.sortIndex ?? -1) + 1,
             weight: last?.weight ?? 0,
-            reps: last?.reps ?? 10
+            reps: last?.reps ?? 10,
+            // Drop sets usually come in a row; everything else continues as a working set.
+            kind: last?.kind == .drop ? .drop : .normal
         )
         context.insert(set)
         entry.sets.append(set)
