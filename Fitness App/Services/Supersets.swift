@@ -53,6 +53,18 @@ enum Supersets {
         cleanUp(items)
     }
 
+    /// Splits the member's superset right after the member: everything that follows it
+    /// in the group moves to a new group (and single leftovers are dissolved).
+    static func unlinkFromNext<T: SupersetMember>(_ member: T, in items: [T]) {
+        let members = group(of: member, in: items)
+        guard member.supersetGroup != nil,
+              let index = members.firstIndex(where: { $0 === member }),
+              index + 1 < members.count else { return }
+        let newID = (items.compactMap(\.supersetGroup).max() ?? 0) + 1
+        for item in members[(index + 1)...] { item.supersetGroup = newID }
+        cleanUp(items)
+    }
+
     /// Dissolves groups that have fewer than two members (e.g. after deleting an exercise).
     static func cleanUp<T: SupersetMember>(_ items: [T]) {
         let counts = Dictionary(grouping: items.compactMap(\.supersetGroup), by: { $0 }).mapValues(\.count)

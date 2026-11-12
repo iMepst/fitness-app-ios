@@ -7,11 +7,11 @@ struct PlanListView: View {
     let onResume: (WorkoutSession) -> Void
 
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \WorkoutPlan.sortIndex) private var plans: [WorkoutPlan]
+    @Query(filter: #Predicate<WorkoutPlan> { !$0.isDraft }, sort: \WorkoutPlan.sortIndex)
+    private var plans: [WorkoutPlan]
 
     @State private var path: [WorkoutPlan] = []
-    @State private var showNewPlanAlert = false
-    @State private var newPlanName = ""
+    @State private var newPlan: WorkoutPlan?
     @State private var showSettings = false
 
     var body: some View {
@@ -65,17 +65,14 @@ struct PlanListView: View {
             }
             .navigationTitle("Training")
             .navigationDestination(for: WorkoutPlan.self) { plan in
-                PlanEditorView(plan: plan)
+                PlanEditorView(plan: plan, canStart: runningSession == nil) { onStart(plan) }
             }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     GymMenu()
                 }
                 ToolbarItem(placement: .primaryAction) {
-                    Button("Neuer Plan", systemImage: "plus") {
-                        newPlanName = ""
-                        showNewPlanAlert = true
-                    }
+                    Button("Neuer Plan", systemImage: "plus", action: createPlan)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Einstellungen", systemImage: "gearshape") {
@@ -86,20 +83,18 @@ struct PlanListView: View {
             .sheet(isPresented: $showSettings) {
                 SettingsView()
             }
-            .alert("Neuer Plan", isPresented: $showNewPlanAlert) {
-                TextField("Name, z. B. Push", text: $newPlanName)
-                Button("Abbrechen", role: .cancel) {}
-                Button("Anlegen", action: createPlan)
+            .sheet(item: $newPlan) { plan in
+                NewPlanSheet(plan: plan)
             }
         }
     }
 
+    /// Inserts a hidden draft; `NewPlanSheet` either saves it or deletes it again.
     private func createPlan() {
-        let name = newPlanName.trimmingCharacters(in: .whitespaces)
-        let plan = WorkoutPlan(name: name.isEmpty ? "Neuer Plan" : name, sortIndex: (plans.map(\.sortIndex).max() ?? -1) + 1)
+        let plan = WorkoutPlan(name: "", sortIndex: (plans.map(\.sortIndex).max() ?? -1) + 1)
+        plan.isDraft = true
         modelContext.insert(plan)
-        try? modelContext.save()
-        path.append(plan)
+        newPlan = plan
     }
 
     private func deletePlans(at offsets: IndexSet) {

@@ -35,6 +35,14 @@ struct Fitness_AppApp: App {
             UserDefaults.standard.set(gym.id.uuidString, forKey: AppSettings.activeGymIDKey)
         }
 
+        // A plan left as a draft (app quit while "Neuer Plan" was open) was never saved – remove it.
+        let context = modelContainer.mainContext
+        if let drafts = try? context.fetch(FetchDescriptor<WorkoutPlan>(predicate: #Predicate { $0.isDraft })),
+           !drafts.isEmpty {
+            drafts.forEach(context.delete)
+            try? context.save()
+        }
+
         UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
 
         // Cancellation deadlines roll forward each period – keep reminders current.

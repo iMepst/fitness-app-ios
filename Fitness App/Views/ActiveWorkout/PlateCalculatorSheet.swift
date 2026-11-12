@@ -53,17 +53,9 @@ struct PlateCalculatorSheet: View {
 
     /// Jumps to the next weight that can be loaded exactly.
     private func stepButton(systemImage: String, up: Bool) -> some View {
-        Button {
+        RoundStepButton(systemImage: systemImage, accessibilityLabel: up ? "Nächstes Gewicht" : "Vorheriges Gewicht") {
             target = PlateCalculator.step(from: target, bar: barWeight, plates: plates, up: up)
-        } label: {
-            Image(systemName: systemImage)
-                .font(.title3.weight(.semibold))
-                .frame(width: 48, height: 48)
         }
-        .buttonStyle(.bordered)
-        .buttonBorderShape(.circle)
-        .buttonRepeatBehavior(.enabled)
-        .accessibilityLabel(up ? "Nächstes Gewicht" : "Vorheriges Gewicht")
     }
 
     @ViewBuilder

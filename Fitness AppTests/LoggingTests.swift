@@ -151,6 +151,27 @@ struct LoggingTests {
         #expect(!Supersets.shouldStartRest(after: e[2], in: session.exercises))
     }
 
+    @Test func unlinkingFromNextSplitsGroupAfterMember() {
+        let session = session(with: ["A", "B", "C", "D"])
+        let e = session.sortedExercises
+        Supersets.linkWithNext(e[0], in: session.exercises)
+        Supersets.linkWithNext(e[1], in: session.exercises)
+        Supersets.linkWithNext(e[2], in: session.exercises)
+
+        // A-B-C-D → A-B | C-D
+        Supersets.unlinkFromNext(e[1], in: session.exercises)
+        #expect(Supersets.isLinkedWithNext(e[0], in: session.exercises))
+        #expect(!Supersets.isLinkedWithNext(e[1], in: session.exercises))
+        #expect(Supersets.isLinkedWithNext(e[2], in: session.exercises))
+        #expect(e[0].supersetGroup != e[2].supersetGroup)
+
+        // A-B | C-D → A-B, C and D single
+        Supersets.unlinkFromNext(e[2], in: session.exercises)
+        #expect(e[2].supersetGroup == nil)
+        #expect(e[3].supersetGroup == nil)
+        #expect(e[0].supersetGroup != nil)
+    }
+
     // MARK: - Plates & numbering
 
     @Test func plateCalculatorLoadsExactWeight() throws {

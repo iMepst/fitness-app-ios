@@ -6,6 +6,8 @@ final class WorkoutPlan {
     var name: String
     var sortIndex: Int
     var createdAt: Date
+    /// `true` while the plan is being created in the "Neuer Plan" sheet and not yet saved.
+    var isDraft: Bool = false
 
     @Relationship(deleteRule: .cascade, inverse: \PlanEntry.plan)
     var entries: [PlanEntry] = []

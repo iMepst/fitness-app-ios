@@ -40,7 +40,8 @@ struct ExercisePickerView: View {
                                             .font(.caption.bold())
                                             .foregroundStyle(.white)
                                             .frame(width: 24, height: 24)
-                                            .background(.tint, in: Circle())
+                                            // Not `.tint`: the row sets `.tint(.primary)`, which made the badge white on white in dark mode.
+                                            .background(Color.accentColor, in: Circle())
                                     } else {
                                         Image(systemName: "circle")
                                             .font(.title3)
