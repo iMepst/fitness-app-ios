@@ -32,12 +32,20 @@ enum PreviewData {
             for entry in session.exercises {
                 for set in entry.sets {
                     set.weight = entry.exerciseName == "Bankdrücken" ? Double(80 - weeksAgo * 2) : 12.5
+                    // Last week every set hit the top of the 8–12 range → weight suggestion next time.
+                    if weeksAgo == 1 { set.reps = 12 }
                     set.isCompleted = true
                 }
             }
             WorkoutFactory.finish(session, in: context)
             session.endDate = session.startDate.addingTimeInterval(55 * 60)
         }
+
+        for daysAgo in stride(from: 0, through: 28, by: 4) {
+            let date = Calendar.current.date(byAdding: .day, value: -daysAgo, to: .now)!
+            context.insert(BodyWeightEntry(date: date, kg: 82.4 - Double(28 - daysAgo) * 0.05))
+        }
+        try? context.save()
         return container
     }()
 }

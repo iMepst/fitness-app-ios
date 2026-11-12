@@ -14,6 +14,13 @@ struct Fitness_AppApp: App {
     let modelContainer: ModelContainer
 
     init() {
+        #if DEBUG
+        // `-demoData` runs the app on the in-memory preview data (never touches the real store).
+        if ProcessInfo.processInfo.arguments.contains("-demoData") {
+            modelContainer = PreviewData.container
+            return
+        }
+        #endif
         do {
             let schema = Schema(AppSchema.models)
             // Own store name so the old template store (Item) is never migrated.

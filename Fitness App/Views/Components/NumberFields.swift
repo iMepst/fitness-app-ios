@@ -22,6 +22,13 @@ struct DecimalField: View {
                     value = parsed
                 }
             }
+            .onChange(of: value) { _, newValue in
+                // Value changed from outside (e.g. "apply suggestion") – refresh the text.
+                let current = Double(text.replacingOccurrences(of: ",", with: ".")) ?? 0
+                if current != newValue {
+                    text = newValue == 0 ? "" : Format.weight(newValue)
+                }
+            }
     }
 }
 
@@ -42,6 +49,11 @@ struct IntegerField: View {
                     value = 0
                 } else if let parsed = Int(newValue) {
                     value = parsed
+                }
+            }
+            .onChange(of: value) { _, newValue in
+                if (Int(text) ?? 0) != newValue {
+                    text = newValue == 0 ? "" : "\(newValue)"
                 }
             }
     }

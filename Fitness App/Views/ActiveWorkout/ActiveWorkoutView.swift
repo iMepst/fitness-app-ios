@@ -15,6 +15,13 @@ struct ActiveWorkoutView: View {
     @State private var isFinished = false
     @State private var setCompletedTrigger = 0
     @State private var plateTarget: PlateTarget?
+    @State private var recordBanner: RecordBanner?
+
+    private struct RecordBanner: Identifiable, Equatable {
+        let id = UUID()
+        let exerciseName: String
+        let detail: String
+    }
 
     private struct PlateTarget: Identifiable {
         let id = UUID()
@@ -79,9 +86,17 @@ struct ActiveWorkoutView: View {
                         ? Supersets.next(after: entry, in: entries)?.exerciseName : nil,
                     canLinkWithNext: Supersets.next(after: entry, in: entries) != nil
                         && !Supersets.isLinkedWithNext(entry, in: entries)
-                ) {
+                ) { set in
                     dismissKeyboard()
                     setCompletedTrigger += 1
+                    if WorkoutStats.isRecordSet(set) {
+                        withAnimation(.spring) {
+                            recordBanner = RecordBanner(
+                                exerciseName: entry.exerciseName,
+                                detail: "\(Format.weight(set.weight)) kg × \(set.reps) · 1RM ≈ \(Format.weight(WorkoutStats.estimatedOneRepMax(weight: set.weight, reps: set.reps).rounded())) kg"
+                            )
+                        }
+                    }
                     if Supersets.shouldStartRest(after: entry, in: session.exercises) {
                         restTimer.start(seconds: entry.restSeconds)
                     }
@@ -128,6 +143,33 @@ struct ActiveWorkoutView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
+        .overlay(alignment: .top) {
+            if let banner = recordBanner {
+                HStack(spacing: 12) {
+                    Image(systemName: "trophy.fill")
+                        .font(.title2)
+                        .foregroundStyle(.orange)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Neue Bestleistung! 🏆").font(.headline)
+                        Text("\(banner.exerciseName): \(banner.detail)")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding()
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20))
+                .shadow(color: .black.opacity(0.12), radius: 10, y: 4)
+                .padding(.horizontal)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .onTapGesture { withAnimation { recordBanner = nil } }
+                .task(id: banner.id) {
+                    try? await Task.sleep(for: .seconds(3))
+                    withAnimation { recordBanner = nil }
+                }
+            }
+        }
+        .sensoryFeedback(.success, trigger: recordBanner?.id) { _, new in new != nil }
         .animation(.snappy, value: restTimer.isActive)
         .sensoryFeedback(.success, trigger: restTimer.finishCount)
         .sensoryFeedback(.impact(weight: .medium), trigger: setCompletedTrigger)
@@ -198,7 +240,7 @@ private struct ExerciseLogSection: View {
     /// Name of the next exercise when this one is linked with it.
     let nextInSuperset: String?
     let canLinkWithNext: Bool
-    let onSetCompleted: () -> Void
+    let onSetCompleted: (SetEntry) -> Void
     let onRemove: () -> Void
     let onLink: () -> Void
     let onUnlink: () -> Void
@@ -220,6 +262,22 @@ private struct ExerciseLogSection: View {
                 }
             }
 
+            if let suggestion = suggestedWeight {
+                HStack {
+                    Label("Vorschlag: \(Format.weight(suggestion)) kg", systemImage: "arrow.up.circle.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.green)
+                    Spacer()
+                    Button("Übernehmen") {
+                        for set in openWorkingSets where set.weight < suggestion {
+                            set.weight = suggestion
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .font(.subheadline)
+                }
+            }
+
             TextField("Notiz", text: $entry.notes, axis: .vertical)
                 .font(.subheadline)
 
@@ -236,7 +294,7 @@ private struct ExerciseLogSection: View {
             let numbers = WorkoutStats.setNumbers(sets)
             ForEach(Array(sets.enumerated()), id: \.element.id) { index, set in
                 SetRow(number: numbers[index], set: set) { completed in
-                    if completed { onSetCompleted() }
+                    if completed { onSetCompleted(set) }
                 }
             }
             .onDelete { offsets in
@@ -284,6 +342,18 @@ private struct ExerciseLogSection: View {
                 Label("Ohne Pause weiter mit \(nextInSuperset)", systemImage: "arrow.down")
             }
         }
+    }
+
+    private var openWorkingSets: [SetEntry] {
+        entry.sortedSets.filter { !$0.isCompleted && $0.kind == .normal }
+    }
+
+    /// Shown only while some open working set is still below the suggestion.
+    private var suggestedWeight: Double? {
+        guard let suggestion = WorkoutStats.suggestedWeight(for: entry),
+              openWorkingSets.contains(where: { $0.weight < suggestion })
+        else { return nil }
+        return suggestion
     }
 
     private var lastPerformance: SessionExercise? {

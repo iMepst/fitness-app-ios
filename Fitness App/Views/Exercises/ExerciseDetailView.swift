@@ -66,9 +66,17 @@ struct ExerciseDetailView: View {
                     .chartYAxisLabel("kg")
                     .frame(height: 200)
                     .padding(.vertical, 8)
+                }
+            }
 
-                    LabeledContent("Bestes geschätztes 1RM", value: "\(Format.weight(points.map(\.estimatedOneRepMax).max() ?? 0)) kg")
-                    LabeledContent("Höchstes Gewicht", value: "\(Format.weight(points.map(\.topWeight).max() ?? 0)) kg")
+            let records = WorkoutStats.records(for: exercise)
+            if !records.isEmpty {
+                Section("Rekorde") {
+                    recordRow("Geschätztes 1RM", records.bestOneRepMax) { "\(Format.weight($0.rounded())) kg" }
+                    recordRow("Höchstes Gewicht", records.heaviestWeight) { "\(Format.weight($0)) kg" }
+                    recordRow("Meiste Wiederholungen", records.mostReps) { "\(Int($0)) Wdh." }
+                    recordRow("Bestes Satzvolumen", records.bestSetVolume) { Format.volume($0) }
+                    recordRow("Bestes Einheitenvolumen", records.bestSessionVolume) { Format.volume($0) }
                 }
             }
 
@@ -109,6 +117,22 @@ struct ExerciseDetailView: View {
             }
         } message: {
             Text("Die Übung wird aus allen Plänen entfernt. Vergangene Trainings bleiben im Verlauf erhalten.")
+        }
+    }
+
+    @ViewBuilder
+    private func recordRow(_ title: String, _ record: RecordValue?, format: (Double) -> String) -> some View {
+        if let record {
+            LabeledContent {
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(format(record.value)).monospacedDigit()
+                    Text(record.date.formatted(.dateTime.day().month().year()))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            } label: {
+                Text(title)
+            }
         }
     }
 }

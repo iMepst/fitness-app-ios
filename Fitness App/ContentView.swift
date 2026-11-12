@@ -30,6 +30,9 @@ struct ContentView: View {
             Tab("Verlauf", systemImage: "clock.arrow.circlepath") {
                 HistoryListView()
             }
+            Tab("Statistik", systemImage: "chart.bar.xaxis") {
+                StatsView()
+            }
             Tab("Übungen", systemImage: "list.bullet.rectangle.portrait") {
                 ExerciseListView()
             }

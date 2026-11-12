@@ -1,6 +1,22 @@
 import Foundation
 import SwiftData
 
+struct RecordValue: Equatable {
+    let value: Double
+    let date: Date
+}
+
+/// All-time bests of one exercise (working sets of finished sessions only).
+struct ExerciseRecords: Equatable {
+    var bestOneRepMax: RecordValue?
+    var heaviestWeight: RecordValue?
+    var mostReps: RecordValue?
+    var bestSetVolume: RecordValue?
+    var bestSessionVolume: RecordValue?
+
+    var isEmpty: Bool { bestOneRepMax == nil && mostReps == nil }
+}
+
 struct ProgressPoint: Identifiable {
     let id: PersistentIdentifier
     let date: Date
@@ -73,6 +89,61 @@ enum WorkoutStats {
             .filter { ($0.session?.startDate ?? .distantFuture) < session.startDate }
         guard current > 0, !previous.isEmpty else { return false }
         return current > (previous.map { bestOneRepMax(of: $0) }.max() ?? 0)
+    }
+
+    /// True if this completed working set's estimated 1RM beats all earlier finished sessions
+    /// and every other completed set of the same exercise in the current session.
+    /// Requires history, so the very first session of an exercise never triggers it.
+    static func isRecordSet(_ set: SetEntry) -> Bool {
+        guard set.isCompleted, set.kind.countsAsWorkingSet,
+              let entry = set.sessionExercise, let exercise = entry.exercise
+        else { return false }
+        let value = estimatedOneRepMax(weight: set.weight, reps: set.reps)
+        guard value > 0 else { return false }
+
+        let history = finishedEntries(for: exercise, excluding: entry.session)
+        guard !history.isEmpty else { return false }
+        let historyBest = history.map(bestOneRepMax(of:)).max() ?? 0
+        let sessionBest = entry.workingSets
+            .filter { $0.persistentModelID != set.persistentModelID }
+            .map { estimatedOneRepMax(weight: $0.weight, reps: $0.reps) }
+            .max() ?? 0
+        return value > max(historyBest, sessionBest)
+    }
+
+    /// Suggests more weight when every working set last time reached the top of the rep range.
+    static func suggestedWeight(for entry: SessionExercise) -> Double? {
+        guard let exercise = entry.exercise,
+              let step = exercise.equipment.progressionStep,
+              let targetMax = entry.targetRepsMax,
+              let last = lastPerformance(of: exercise, excluding: entry.session)
+        else { return nil }
+        let sets = last.workingSets.filter { $0.kind == .normal }
+        guard !sets.isEmpty, sets.allSatisfy({ $0.reps >= targetMax }) else { return nil }
+        let top = sets.map(\.weight).max() ?? 0
+        guard top > 0 else { return nil }
+        return top + step
+    }
+
+    static func records(for exercise: Exercise) -> ExerciseRecords {
+        var records = ExerciseRecords()
+        func update(_ keyPath: WritableKeyPath<ExerciseRecords, RecordValue?>, _ value: Double, _ date: Date) {
+            guard value > 0, value > (records[keyPath: keyPath]?.value ?? 0) else { return }
+            records[keyPath: keyPath] = RecordValue(value: value, date: date)
+        }
+        // Oldest first, so ties keep the date they were first reached.
+        for entry in finishedEntries(for: exercise).reversed() {
+            guard let date = entry.session?.startDate else { continue }
+            let sets = entry.workingSets
+            for set in sets {
+                update(\.bestOneRepMax, estimatedOneRepMax(weight: set.weight, reps: set.reps), date)
+                update(\.heaviestWeight, set.weight, date)
+                update(\.mostReps, Double(set.reps), date)
+                update(\.bestSetVolume, set.weight * Double(set.reps), date)
+            }
+            update(\.bestSessionVolume, volume(of: sets), date)
+        }
+        return records
     }
 
     /// Display numbers for a set list: normal sets count 1, 2, 3 …; other kinds show a badge instead.

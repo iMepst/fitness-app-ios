@@ -23,6 +23,15 @@ enum Equipment: String, CaseIterable, Identifiable, Codable {
     case sonstiges = "Sonstiges"
 
     var id: String { rawValue }
+
+    /// Smallest sensible weight jump for progression suggestions; `nil` = no suggestion.
+    var progressionStep: Double? {
+        switch self {
+        case .langhantel, .maschine, .kabelzug, .sonstiges: 2.5
+        case .kurzhantel: 2
+        case .koerpergewicht: nil
+        }
+    }
 }
 
 enum SetKind: String, CaseIterable, Identifiable, Codable {
