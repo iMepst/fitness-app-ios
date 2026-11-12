@@ -1,0 +1,19 @@
+# Xcode
+## User settings
+xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+
+## Build & Derived Data
+build/
+DerivedData/
+*.moved-aside
+*.xcuserstate
+
+## Swift Package Manager
+.build/
+
+## macOS
+.DS_Store
+.AppleDouble
+.LSOverride
