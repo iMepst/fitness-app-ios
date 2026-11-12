@@ -56,14 +56,27 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    Stepper("Stange: \(Format.weight(barWeight)) kg", value: $barWeight, in: 0...30, step: 2.5)
-                    ForEach(AppSettings.standardPlates, id: \.self) { plate in
-                        Toggle("\(Format.weight(plate)) kg", isOn: plateBinding(plate))
+                    Stepper(value: $barWeight, in: 0...30, step: 2.5) {
+                        LabeledContent("Stange") {
+                            Text("\(Format.weight(barWeight)) kg")
+                                .monospacedDigit()
+                        }
                     }
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("Verfügbare Scheiben")
+                            Spacer()
+                            Text("\(selectedPlates.count) von \(AppSettings.standardPlates.count)")
+                                .foregroundStyle(.secondary)
+                                .monospacedDigit()
+                        }
+                        PlatePickerGrid(selection: plateSelection)
+                    }
+                    .padding(.vertical, 4)
                 } header: {
                     Text("Scheibenrechner")
                 } footer: {
-                    Text("Welche Scheiben in deinem Studio liegen. Der Rechner zeigt die Beladung pro Seite.")
+                    Text("Tippe auf die Scheiben, die in deinem Studio liegen (in kg). Der Rechner zeigt die Beladung pro Seite.")
                 }
             }
             .onChange(of: healthSync) { _, isOn in
@@ -96,14 +109,70 @@ struct SettingsView: View {
             : "\(Format.count(count, "Training", "Trainings")) übertragen."
     }
 
-    private func plateBinding(_ plate: Double) -> Binding<Bool> {
+    private var selectedPlates: Set<Double> {
+        Set(AppSettings.parsePlates(platesText))
+    }
+
+    private var plateSelection: Binding<Set<Double>> {
         Binding {
-            AppSettings.parsePlates(platesText).contains(plate)
-        } set: { isOn in
-            var plates = AppSettings.parsePlates(platesText).filter { $0 != plate }
-            if isOn { plates.append(plate) }
-            platesText = AppSettings.encodePlates(plates)
+            selectedPlates
+        } set: { plates in
+            platesText = AppSettings.encodePlates(Array(plates))
         }
+    }
+}
+
+/// Compact grid of plate tokens; tapping one toggles whether it is available.
+private struct PlatePickerGrid: View {
+    @Binding var selection: Set<Double>
+
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 5)
+
+    var body: some View {
+        LazyVGrid(columns: columns, spacing: 8) {
+            ForEach(AppSettings.standardPlates, id: \.self) { plate in
+                token(plate)
+            }
+        }
+        .sensoryFeedback(.selection, trigger: selection)
+    }
+
+    private func token(_ plate: Double) -> some View {
+        let isOn = selection.contains(plate)
+        return Button {
+            if isOn { selection.remove(plate) } else { selection.insert(plate) }
+        } label: {
+            VStack(spacing: 6) {
+                Circle()
+                    .fill(isOn ? plateColor(plate) : .clear)
+                    .overlay(
+                        Circle().strokeBorder(
+                            isOn ? AnyShapeStyle(.black.opacity(0.15)) : AnyShapeStyle(.tertiary),
+                            style: StrokeStyle(lineWidth: 1.5, dash: isOn ? [] : [3, 3])
+                        )
+                    )
+                    .frame(width: 22, height: 22)
+                Text(Format.weight(plate))
+                    .font(.subheadline.weight(.semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(isOn ? .primary : .secondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(isOn ? AnyShapeStyle(Color.accentColor.opacity(0.12)) : AnyShapeStyle(.fill.quaternary))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .strokeBorder(isOn ? Color.accentColor.opacity(0.6) : .clear, lineWidth: 1)
+            )
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .animation(.snappy, value: isOn)
+        .accessibilityLabel("\(Format.weight(plate)) kg")
+        .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 }
 
