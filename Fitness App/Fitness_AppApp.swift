@@ -7,26 +7,34 @@
 
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 @main
 struct Fitness_AppApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+    let modelContainer: ModelContainer
 
+    init() {
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            let schema = Schema(AppSchema.models)
+            // Own store name so the old template store (Item) is never migrated.
+            let configuration = ModelConfiguration("FitnessApp", schema: schema)
+            modelContainer = try ModelContainer(for: schema, configurations: [configuration])
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
         }
-    }()
+
+        if let gym = SeedData.seedIfNeeded(context: modelContainer.mainContext),
+           (UserDefaults.standard.string(forKey: AppSettings.activeGymIDKey) ?? "").isEmpty {
+            UserDefaults.standard.set(gym.id.uuidString, forKey: AppSettings.activeGymIDKey)
+        }
+
+        UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
+    }
 
     var body: some Scene {
         WindowGroup {
             ContentView()
         }
-        .modelContainer(sharedModelContainer)
+        .modelContainer(modelContainer)
     }
 }

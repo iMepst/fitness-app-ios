@@ -10,52 +10,51 @@ import SwiftData
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
+    @Query(filter: #Predicate<WorkoutSession> { $0.endDate == nil }, sort: \WorkoutSession.startDate, order: .reverse)
+    private var runningSessions: [WorkoutSession]
+    @Query(sort: \Gym.createdAt) private var gyms: [Gym]
+    @AppStorage(AppSettings.activeGymIDKey) private var activeGymID = ""
+
+    @State private var presentedSession: WorkoutSession?
+    @State private var didRestore = false
 
     var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
-                }
-                .onDelete(perform: deleteItems)
+        TabView {
+            Tab("Training", systemImage: "dumbbell.fill") {
+                PlanListView(
+                    runningSession: runningSessions.first,
+                    onStart: start,
+                    onResume: { presentedSession = $0 }
+                )
             }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
-                }
+            Tab("Verlauf", systemImage: "clock.arrow.circlepath") {
+                HistoryListView()
             }
-        } detail: {
-            Text("Select an item")
+            Tab("Übungen", systemImage: "list.bullet.rectangle.portrait") {
+                ExerciseListView()
+            }
+        }
+        .fullScreenCover(item: $presentedSession) { session in
+            ActiveWorkoutView(session: session)
+        }
+        .task {
+            // Reopen a workout that was still running when the app was closed.
+            guard !didRestore else { return }
+            didRestore = true
+            presentedSession = runningSessions.first
         }
     }
 
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
+    private func start(_ plan: WorkoutPlan?) {
+        if let running = runningSessions.first {
+            presentedSession = running
+            return
         }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
-            }
-        }
+        presentedSession = WorkoutFactory.startSession(plan: plan, gym: gyms.active(id: activeGymID), in: modelContext)
     }
 }
 
 #Preview {
     ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
+        .modelContainer(PreviewData.container)
 }
