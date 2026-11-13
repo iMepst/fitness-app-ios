@@ -245,26 +245,38 @@ struct StatsView: View {
     }
 }
 
+/// Sheet for logging one body weight entry, styled like the plan entry editor.
 struct BodyWeightEditor: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \BodyWeightEntry.date, order: .reverse) private var bodyWeights: [BodyWeightEntry]
 
-    @State private var kg: Double = 0
+    /// Weight in tenths of a kilogram, so the stepper can work on integers.
+    @State private var tenths = 750
+    @State private var stepTenths = 1
     @State private var date = Date.now
+    @State private var didLoadLast = false
+
+    private static let range = 200...3500
+    private static let stepPresets: [(label: String, value: Int)] = [
+        ("0,1 kg", 1), ("0,5 kg", 5), ("1 kg", 10),
+    ]
+    private static let dayPresets: [(label: String, value: Int)] = [
+        ("Heute", 0), ("Gestern", 1), ("Vorgestern", 2),
+    ]
+
+    private var kg: Double { Double(tenths) / 10 }
 
     var body: some View {
         NavigationStack {
-            Form {
-                HStack {
-                    Text("Gewicht")
-                    Spacer()
-                    DecimalField(placeholder: "kg", value: $kg)
-                        .frame(width: 100)
-                    Text("kg").foregroundStyle(.secondary)
+            ScrollView {
+                VStack(spacing: 16) {
+                    weightCard
+                    dateCard
                 }
-                DatePicker("Datum", selection: $date, in: ...Date.now)
+                .padding()
             }
+            .background(Color(.systemGroupedBackground))
             .navigationTitle("Körpergewicht")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -273,13 +285,70 @@ struct BodyWeightEditor: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Sichern", action: save)
-                        .disabled(kg <= 0)
                 }
             }
             .onAppear {
-                if kg == 0, let last = bodyWeights.first { kg = last.kg }
+                guard !didLoadLast else { return }
+                didLoadLast = true
+                if let last = bodyWeights.first {
+                    tenths = min(max(Int((last.kg * 10).rounded()), Self.range.lowerBound), Self.range.upperBound)
+                }
             }
         }
+    }
+
+    // MARK: - Parts
+
+    private var weightCard: some View {
+        EditorCard(title: "Gewicht", systemImage: "scalemass") {
+            ValueStepper(
+                label: "Gewicht",
+                value: $tenths,
+                range: Self.range,
+                step: stepTenths,
+                format: { "\((Double($0) / 10).formatted(.number.precision(.fractionLength(1)))) kg" }
+            )
+            PresetChips(options: Self.stepPresets, selection: stepTenths) { stepTenths = $0 }
+            if let last = bodyWeights.first {
+                Text(deltaText(to: last))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
+                    .animation(.snappy, value: tenths)
+                    .frame(maxWidth: .infinity)
+            }
+        }
+    }
+
+    private var dateCard: some View {
+        EditorCard(title: "Datum", systemImage: "calendar") {
+            PresetChips(options: Self.dayPresets, selection: daysAgo) { days in
+                date = Calendar.current.date(byAdding: .day, value: -days, to: .now) ?? .now
+            }
+            DatePicker("Zeitpunkt", selection: $date, in: ...Date.now)
+        }
+    }
+
+    /// Whole days between the chosen date and today; matches a day preset or none.
+    private var daysAgo: Int {
+        let calendar = Calendar.current
+        return calendar.dateComponents(
+            [.day],
+            from: calendar.startOfDay(for: date),
+            to: calendar.startOfDay(for: .now)
+        ).day ?? -1
+    }
+
+    private func deltaText(to last: BodyWeightEntry) -> String {
+        let delta = kg - last.kg
+        let lastDay = last.date.formatted(.dateTime.day().month())
+        if abs(delta) < 0.05 {
+            return "Gleich wie am \(lastDay) (\(Format.weight(last.kg)) kg)"
+        }
+        let sign = delta > 0 ? "+" : "−"
+        let amount = abs(delta).formatted(.number.precision(.fractionLength(1)))
+        return "\(sign)\(amount) kg seit \(lastDay)"
     }
 
     private func save() {
@@ -295,4 +364,11 @@ struct BodyWeightEditor: View {
 #Preview {
     StatsView()
         .modelContainer(PreviewData.container)
+}
+
+#Preview("Körpergewicht eintragen") {
+    Color.clear.sheet(isPresented: .constant(true)) {
+        BodyWeightEditor()
+    }
+    .modelContainer(PreviewData.container)
 }
